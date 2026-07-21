@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Bookshelf</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0B3D3A">
+<link rel="stylesheet" href="/style.css">
+<style>
+.shelf-wrap{ min-height: 100vh; background: linear-gradient(180deg, var(--teal-deep) 0%, #0E4642 60%, var(--teal-deep) 100%); padding: 40px 20px; }
+.shelf-inner{ max-width: 760px; margin: 0 auto; }
+.shelf-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom: 30px; font-family:-apple-system,sans-serif; }
+.shelf-header h1{ color: var(--gold-light); font-family: Georgia, serif; font-size: 24px; margin:0; }
+.shelf-header .signout{ background:transparent; border:1px solid var(--gold-light); color:var(--gold-light); border-radius:14px; padding:6px 14px; font-size:12px; cursor:pointer; font-family:-apple-system,sans-serif; }
+.shelf-section-title{ font-family:-apple-system,sans-serif; letter-spacing:2px; text-transform:uppercase; font-size:11px; color: var(--gold-light); opacity:0.85; margin: 26px 0 12px; }
+.book-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:16px; }
+.book-card{ background: var(--ivory); border-radius: 8px; padding: 20px; border: 1.4pt solid var(--gold); text-decoration:none; color: var(--ink); display:flex; flex-direction:column; gap:6px; transition: transform .12s; }
+.book-card:hover{ transform: translateY(-2px); }
+.book-card .title{ font-family: Georgia, serif; font-size:16px; font-weight:bold; color: var(--teal-deep); }
+.book-card .native{ font-size:14px; color: var(--gold); }
+.book-card .cta{ font-family:-apple-system,sans-serif; font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-top:8px; color: var(--teal-mid); }
+.empty-msg{ font-family:-apple-system,sans-serif; color: var(--ivory); opacity:0.75; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="shelf-wrap">
+  <div class="shelf-inner">
+    <div class="shelf-header">
+      <h1>My Bookshelf</h1>
+      <button class="signout" id="signOutBtn">Sign out</button>
+    </div>
+
+    <div id="ownedSection">
+      <div class="shelf-section-title">Your books</div>
+      <div class="book-grid" id="ownedGrid"></div>
+    </div>
+
+    <div id="otherSection">
+      <div class="shelf-section-title">More languages</div>
+      <div class="book-grid" id="otherGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem('sa_token');
+if (!token) window.location.href = '/index.html';
+
+document.getElementById('signOutBtn').addEventListener('click', () => {
+  localStorage.removeItem('sa_token');
+  localStorage.removeItem('sa_email');
+  window.location.href = '/index.html';
+});
+
+async function load() {
+  try {
+    const res = await fetch('/api/my-books', { headers: { Authorization: 'Bearer ' + token } });
+    if (res.status === 401) {
+      localStorage.removeItem('sa_token');
+      window.location.href = '/index.html';
+      return;
+    }
+    const data = await res.json();
+    const owned = data.books.filter(b => b.owned);
+    const other = data.books.filter(b => !b.owned);
+
+    const ownedGrid = document.getElementById('ownedGrid');
+    const otherGrid = document.getElementById('otherGrid');
+
+    if (owned.length === 0) {
+      ownedGrid.innerHTML = '<div class="empty-msg">No books yet under this email.</div>';
+    } else {
+      owned.forEach(b => {
+        const a = document.createElement('a');
+        a.className = 'book-card';
+        a.href = '/book.html?book=' + encodeURIComponent(b.slug);
+        a.innerHTML = `<div class="title">${b.title}</div>` +
+          (b.title_native ? `<div class="native ar">${b.title_native}</div>` : '') +
+          `<div class="cta">Open book →</div>`;
+        ownedGrid.appendChild(a);
+      });
+    }
+
+    if (other.length === 0) {
+      document.getElementById('otherSection').style.display = 'none';
+    } else {
+      other.forEach(b => {
+        const a = document.createElement('a');
+        a.className = 'book-card';
+        a.href = b.buy_url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.innerHTML = `<div class="title">${b.title}</div>` +
+          (b.title_native ? `<div class="native ar">${b.title_native}</div>` : '') +
+          `<div class="cta">Get this book →</div>`;
+        otherGrid.appendChild(a);
+      });
+    }
+  } catch (err) {
+    document.getElementById('ownedGrid').innerHTML =
+      '<div class="empty-msg">Something went wrong loading your bookshelf. Try refreshing.</div>';
+  }
+}
+
+load();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

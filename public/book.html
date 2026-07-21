@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learn Languages</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0B3D3A">
+<link rel="stylesheet" href="/style.css">
+<style>
+.page-wrap{ width: 6in; margin: 28px auto; padding: 0 10px; max-width: 100%; }
+.page {
+  position: relative; min-height: 9in;
+  padding: 0.45in 0.5in 0.55in 0.5in;
+  background: var(--ivory); border-radius: 6px;
+  box-shadow: 0 8px 28px rgba(11,61,58,0.18); overflow: hidden;
+}
+.hidden { display: none !important; }
+.back-link{ color: var(--gold-light); text-decoration:none; font-size:12px; margin-right:14px; }
+</style>
+</head>
+<body>
+
+<div class="loading-wrap" id="loadingWrap">
+  <div class="loading-spinner"></div>
+  <div id="loadingMsg">Opening your book…</div>
+</div>
+
+<div id="appRoot" class="hidden">
+  <div class="control-bar">
+    <a class="back-link" href="/library.html">← Bookshelf</a>
+    <span class="brand" id="brandLabel">SPEAK ARABIC</span>
+    <input type="text" id="searchBox" placeholder="Search this book…">
+    <select id="jumpSelect"><option value="">Jump to chapter…</option></select>
+    <div class="rate-control">
+      <label for="rateSlider">Voice speed</label>
+      <input type="range" id="rateSlider" min="0.5" max="1.2" step="0.1" value="0.8">
+    </div>
+    <button class="signout" id="signOutBtn">Sign out</button>
+    <div class="voice-status-mini" id="voiceStatus"></div>
+  </div>
+  <div id="bookContent"></div>
+  <footer style="text-align:center;font-family:-apple-system,sans-serif;font-size:11px;color:#0B3D3A;padding:20px;opacity:0.7;">
+    Tap any word in the target language to hear it
+  </footer>
+</div>
+
+<script>
+const token = localStorage.getItem('sa_token');
+const params = new URLSearchParams(window.location.search);
+const bookSlug = params.get('book');
+
+if (!token) {
+  window.location.href = '/index.html';
+} else if (!bookSlug) {
+  window.location.href = '/library.html';
+}
+
+async function loadBook() {
+  try {
+    const res = await fetch('/api/get-book?book=' + encodeURIComponent(bookSlug), {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (res.status === 401) {
+      localStorage.removeItem('sa_token');
+      window.location.href = '/index.html';
+      return;
+    }
+    if (res.status === 403) {
+      document.getElementById('loadingMsg').innerHTML =
+        "You don't have access to this book yet. <a href='/library.html' style='color:#E4C97A'>Back to your bookshelf</a>.";
+      return;
+    }
+    if (res.status === 404) {
+      document.getElementById('loadingMsg').innerHTML =
+        "That book doesn't exist. <a href='/library.html' style='color:#E4C97A'>Back to your bookshelf</a>.";
+      return;
+    }
+    const data = await res.json();
+    document.getElementById('bookContent').innerHTML = data.html;
+    document.getElementById('loadingWrap').classList.add('hidden');
+    document.getElementById('appRoot').classList.remove('hidden');
+    initBookFeatures();
+  } catch (err) {
+    document.getElementById('loadingMsg').innerHTML =
+      "Something went wrong loading your book. <a href='/index.html' style='color:#E4C97A'>Try signing in again</a>.";
+  }
+}
+
+function initBookFeatures() {
+  document.getElementById('signOutBtn').addEventListener('click', () => {
+    localStorage.removeItem('sa_token');
+    localStorage.removeItem('sa_email');
+    window.location.href = '/index.html';
+  });
+
+  // ---------- Text-to-speech ----------
+  let preferredVoice = null;
+  function pickVoice() {
+    const voices = speechSynthesis.getVoices();
+    // Prefer an Arabic voice for this book; other language books can pass
+    // their own target language via a small data attribute on <body> later.
+    const targetLang = document.body.dataset.lang || 'ar';
+    const matches = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith(targetLang));
+    const status = document.getElementById('voiceStatus');
+    if (matches.length > 0) {
+      preferredVoice = matches[0];
+      if (status) status.textContent = `Voice ready: ${preferredVoice.name} (${preferredVoice.lang})`;
+    } else if (status) {
+      status.textContent = 'No dedicated voice found — using default voice.';
+    }
+  }
+  if ('speechSynthesis' in window) {
+    pickVoice();
+    speechSynthesis.onvoiceschanged = pickVoice;
+  }
+
+  function speak(text, el) {
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    document.querySelectorAll('.speaking').forEach(n => n.classList.remove('speaking'));
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = (document.body.dataset.lang || 'ar') + '-SA';
+    if (preferredVoice) utter.voice = preferredVoice;
+    const rateSlider = document.getElementById('rateSlider');
+    utter.rate = rateSlider ? parseFloat(rateSlider.value) : 0.8;
+    if (el) utter.onstart = () => el.classList.add('speaking');
+    utter.onend = () => { if (el) el.classList.remove('speaking'); };
+    utter.onerror = () => { if (el) el.classList.remove('speaking'); };
+    speechSynthesis.speak(utter);
+  }
+
+  document.querySelectorAll('.ar').forEach(el => {
+    const text = el.textContent.trim();
+    if (!text) return;
+    el.classList.add('speakable');
+    el.addEventListener('click', (e) => { e.stopPropagation(); speak(text, el); });
+  });
+
+  // ---------- Chapter jump ----------
+  const jumpSelect = document.getElementById('jumpSelect');
+  document.querySelectorAll('.chapter-opener').forEach(opener => {
+    const section = opener.closest('[id^="chapter-"]');
+    if (!section) return;
+    const titleEl = opener.querySelector('.chtitle-en');
+    const numEl = opener.querySelector('.chnum');
+    const label = (numEl ? numEl.textContent.trim() + ' ' : '') + (titleEl ? titleEl.textContent.trim() : section.id);
+    const opt = document.createElement('option');
+    opt.value = section.id;
+    opt.textContent = label;
+    jumpSelect.appendChild(opt);
+  });
+  jumpSelect.addEventListener('change', () => {
+    const id = jumpSelect.value;
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    jumpSelect.value = '';
+  });
+
+  // ---------- TOC links ----------
+  document.querySelectorAll('a.toc-item').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = a.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  // ---------- Search ----------
+  const searchBox = document.getElementById('searchBox');
+  const allPages = Array.from(document.querySelectorAll('.page-wrap'));
+  searchBox.addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    if (!q) { allPages.forEach(p => p.classList.remove('hidden')); return; }
+    allPages.forEach(p => {
+      const match = p.textContent.toLowerCase().includes(q);
+      p.classList.toggle('hidden', !match);
+    });
+  });
+
+  if (window.location.hash) {
+    const el = document.querySelector(window.location.hash);
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+  }
+
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
+if (token && bookSlug) loadBook();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+/* Speak Arabic — shared app chrome (login, gate, viewer frame)
+   Palette matches the book itself: ivory pages, deep teal, gold trim */
+:root {
+  --ivory: #FBF6EA;
+  --ivory-deep: #F4EDDC;
+  --teal-deep: #0B3D3A;
+  --teal-mid: #14534E;
+  --teal-pale: #E7F0EC;
+  --gold: #C9A227;
+  --gold-light: #E4C97A;
+  --ink: #22302B;
+  --maroon: #7A2E2E;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: var(--ink);
+  background: #DCD3B8;
+  min-height: 100vh;
+}
+.ar { font-family: 'Traditional Arabic','Geeza Pro','Noto Naskh Arabic','Arial Unicode MS', serif; direction: rtl; unicode-bidi: isolate; }
+
+/* ---------- GATE SCREEN (login) ---------- */
+.gate-wrap {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: linear-gradient(180deg, var(--teal-deep) 0%, #0E4642 60%, var(--teal-deep) 100%);
+}
+.gate-card {
+  width: 100%; max-width: 420px;
+  background: var(--ivory);
+  border-radius: 8px;
+  padding: 44px 36px;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  border: 1.4pt solid var(--gold);
+}
+.gate-eyebrow {
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  letter-spacing: 5px; font-size: 10.5pt; color: var(--teal-mid);
+  text-transform: uppercase; text-align: center; margin-bottom: 6px;
+}
+.gate-title {
+  font-size: 26pt; font-weight: bold; color: var(--teal-deep);
+  text-align: center; margin: 0 0 6px 0;
+}
+.gate-title-ar { font-size: 20pt; color: var(--gold); text-align: center; margin-bottom: 22px; }
+.gate-sub {
+  font-family: -apple-system, sans-serif; font-size: 10.5pt; color: var(--ink);
+  text-align: center; opacity: 0.75; margin-bottom: 28px; line-height: 1.6;
+}
+.gate-form label {
+  display: block; font-family: -apple-system, sans-serif; font-size: 10pt;
+  letter-spacing: 1px; color: var(--teal-mid); margin-bottom: 6px; text-transform: uppercase;
+}
+.gate-form input {
+  width: 100%; padding: 12px 14px; border-radius: 6px; border: 1.2pt solid var(--gold);
+  font-size: 12pt; font-family: -apple-system, sans-serif; margin-bottom: 18px; background: #fff;
+}
+.gate-form input:focus { outline: 2px solid var(--teal-mid); outline-offset: 1px; }
+.gate-btn {
+  width: 100%; padding: 13px; border: none; border-radius: 6px;
+  background: var(--teal-deep); color: var(--gold-light);
+  font-family: -apple-system, sans-serif; font-size: 11.5pt; letter-spacing: 1.5px;
+  text-transform: uppercase; cursor: pointer; transition: background 0.15s;
+}
+.gate-btn:hover { background: var(--teal-mid); }
+.gate-btn:disabled { opacity: 0.6; cursor: wait; }
+.gate-msg {
+  font-family: -apple-system, sans-serif; font-size: 10pt; text-align: center;
+  margin-top: 16px; min-height: 16px;
+}
+.gate-msg.error { color: var(--maroon); }
+.gate-msg.ok { color: var(--teal-mid); }
+.gate-footer {
+  font-family: -apple-system, sans-serif; font-size: 9pt; color: var(--teal-mid);
+  text-align: center; margin-top: 26px; opacity: 0.7;
+}
+.gate-footer a { color: var(--teal-mid); }
+
+/* ---------- APP LOADING STATE (book.html) ---------- */
+.loading-wrap {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--teal-deep); color: var(--ivory); font-family: -apple-system, sans-serif;
+  gap: 14px; text-align: center; padding: 24px;
+}
+.loading-spinner {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid rgba(228,201,122,0.25); border-top-color: var(--gold);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- CONTROL BAR (rebuilt) ---------- */
+.control-bar{
+  position: sticky; top: 0; z-index: 30;
+  background: var(--teal-deep); color: var(--ivory);
+  padding: 10px 16px; border-bottom: 2px solid var(--gold);
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+}
+.control-bar .brand{ font-weight: bold; letter-spacing: 1px; font-size: 13px; color: var(--gold-light); margin-right: auto; }
+.control-bar select, .control-bar input[type="text"]{
+  border-radius: 14px; border: 1px solid var(--gold); padding: 6px 12px; font-size: 12px;
+  background: #fff; color: var(--ink);
+}
+.control-bar input[type="text"]{ min-width: 160px; }
+.control-bar .signout {
+  background: transparent; border: 1px solid var(--gold-light); color: var(--gold-light);
+  border-radius: 14px; padding: 5px 12px; font-size: 11px; cursor: pointer;
+}
+.rate-control{ display:flex; align-items:center; gap:6px; font-size:12px; color: var(--gold-light); }
+.rate-control input{ accent-color: var(--gold); }
+.voice-status-mini{ font-size: 10px; color: var(--gold-light); width: 100%; text-align: center; opacity: .85; }

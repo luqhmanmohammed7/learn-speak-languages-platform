@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learn Languages — Sign In</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0B3D3A">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="gate-wrap">
+  <div class="gate-card">
+    <div class="gate-eyebrow">Members Only</div>
+    <div class="gate-title">My Bookshelf</div>
+    <div class="gate-sub">Enter the email you used at checkout to open your books. No password to remember — we'll recognize your purchases.</div>
+    <form class="gate-form" id="gateForm">
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="you@example.com" required autocomplete="email">
+      <button type="submit" class="gate-btn" id="gateBtn">Open My Bookshelf</button>
+    </form>
+    <div class="gate-msg" id="gateMsg"></div>
+    <div class="gate-footer">Haven't bought a book yet? <a href="/library.html">Browse the catalog</a></div>
+  </div>
+</div>
+<script>
+const form = document.getElementById('gateForm');
+const btn = document.getElementById('gateBtn');
+const msg = document.getElementById('gateMsg');
+
+if (localStorage.getItem('sa_token')) {
+  window.location.href = '/library.html';
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  if (!email) return;
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+  msg.textContent = '';
+  msg.className = 'gate-msg';
+  try {
+    const res = await fetch('/api/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (res.ok && data.token) {
+      localStorage.setItem('sa_token', data.token);
+      localStorage.setItem('sa_email', email);
+      window.location.href = '/library.html';
+    } else {
+      msg.textContent = "We couldn't find a purchase under that email. Check for typos, or browse the catalog if you haven't bought a book yet.";
+      msg.className = 'gate-msg error';
+    }
+  } catch (err) {
+    msg.textContent = 'Something went wrong. Please try again.';
+    msg.className = 'gate-msg error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Open My Bookshelf';
+  }
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
